@@ -71,7 +71,7 @@ if generate_btn:
     
     # 첫째 자리 숫자 추출 함수
     def get_first_digit(num):
-        s = f"{num:.10e}".strstrip().replace('.', '') # 과학적 표기법 변환 후 앞자리 추출
+        s = f"{num:.10e}".strip().replace('.', '') # 과학적 표기법 변환 후 앞자리 추출
         for char in s:
             if char in '123456789':
                 return int(char)
