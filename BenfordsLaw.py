@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-# 스크롤 없이 한 화면에 채우기 위해 전체 화면(wide) 및 상단 여백 제거 설정
+# 스크롤 없이 한 화면에 채우기 위한 레이아웃 설정
 st.set_page_config(page_title="벤포드 시뮬레이터", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
@@ -46,44 +46,46 @@ with col_btn2:
 digits = np.arange(1, 10)
 theoretical = np.log10(1 + 1/digits) * 100
 
+# 1부터 9까지 각 숫자별 고유 색상 지정 (시각적 구분용)
+colors = [
+    '#3182bd', '#6baed6', '#9ecae1', 
+    '#e6550d', '#fd8d3c', '#fdae6b', 
+    '#31a354', '#74c476', '#a1d99b'
+]
+
 if len(st.session_state.data_log) > 0:
     total_samples = len(st.session_state.data_log)
     counts = pd.Series(st.session_state.data_log).value_counts().reindex(digits, fill_value=0)
     actual_pct = (counts / total_samples) * 100
 
-    # 설명 보조 지표 계산 (MSE: 평균제곱오차) - 수렴도 검증용 발표 지표
-    mse = np.mean((actual_pct.values - theoretical) ** 2)
-
-    # 화면 분할 (왼쪽: 차트, 오른쪽: 실시간 통계 표) -> 스크롤 방지용 레이아웃
     col_chart, col_table = st.columns([3, 2])
 
     with col_chart:
         fig = go.Figure()
 
-        # 실제 비율 막대그래프 (내부에 실제 뽑힌 '개수'와 '비율'을 함께 표시)
+        # 각 막대별로 색상을 다르게 적용
         fig.add_trace(go.Bar(
             x=digits,
             y=actual_pct,
             name="실제 비율",
             text=[f"{c}개<br>({p:.1f}%)" for c, p in zip(counts, actual_pct)],
             textposition='auto',
-            marker_color='rgba(55, 83, 109, 0.7)',
-            marker_line_color='rgba(55, 83, 109, 1.0)',
+            marker_color=colors,
+            marker_line_color='#333333',
             marker_line_width=1.5
         ))
 
-        # 벤포드 법칙 이론적 곡선
         fig.add_trace(go.Scatter(
             x=digits,
             y=theoretical,
             name="이론적 곡선",
             mode='lines+markers',
             line=dict(color='firebrick', width=4),
-            marker=dict(size=8)
+            marker=dict(size=8, color='firebrick')
         ))
 
         fig.update_layout(
-            title=f"첫째 자리 숫자 분포 (총 누적 샘플: {total_samples}개)",
+            title=f"첫째 자리 숫자 분포 (총 누적 샘플: {total_samples}개 / 설정된 밑 b = {base})",
             xaxis=dict(title="첫째 자리 숫자", tickmode='linear', tick0=1, dtick=1),
             yaxis=dict(title="비율 (%)", range=[0, max(45, max(actual_pct) + 5)]),
             bargap=0,
@@ -95,15 +97,9 @@ if len(st.session_state.data_log) > 0:
         st.plotly_chart(fig, use_container_width=True)
 
     with col_table:
-        # 발표 시 강조하기 좋은 수렴도 정보 요약 대시보드
-        st.markdown(f"### 📈 실시간 수렴도 분석")
+        st.markdown(f"### 📈 실시간 통계 요약")
         st.metric(label="총 누적 샘플 수", value=f"{total_samples} 개")
-        
-        # 오차가 작을수록(0에 가까울수록) 이론에 완벽히 부합함을 의미
-        st.metric(label="이론치와의 평균 오차 지표 (MSE)", value=f"{mse:.4f}", 
-                  delta="수렴 중" if mse < 10 else "데이터 부족", delta_color="normal" if mse < 10 else "inverse")
 
-        # 상세 통계 테이블
         st.markdown("### 📋 수치 데이터")
         df_res = pd.DataFrame({
             "숫자": digits,
