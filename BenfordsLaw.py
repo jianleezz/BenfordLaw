@@ -3,19 +3,17 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="벤포드 법칙 시뮬레이터", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="벤포드 시뮬레이터", layout="wide", initial_sidebar_state="expanded")
 
-# 화면 스크롤 방지 및 컴팩트한 레이아웃 스타일 설정
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; padding-bottom: 0rem; }
-    iframe { height: 400px !important; }
+    iframe { height: 410px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📊 벤포드의 법칙 & 지수함수 시각화 대시보드")
+st.title("📊 벤포드의 법칙 & 지수함수 발표 대시보드")
 
-# 사이드바 설정
 st.sidebar.header("⚙️ 설정")
 base = st.sidebar.number_input("지수함수의 밑 (b)", min_value=1.001, max_value=2.0, value=1.01, step=0.001, format="%.3f")
 max_x = st.sidebar.slider("데이터 생성 범위 (x의 최대값)", 100, 5000, 1000)
@@ -44,34 +42,22 @@ with col_btn2:
         st.session_state.data_log = []
         st.rerun()
 
-# 1~9 고유 색상 정의
 colors = ['#3182bd', '#6baed6', '#9ecae1', '#e6550d', '#fd8d3c', '#fdae6b', '#31a354', '#74c476', '#a1d99b']
 color_map = {d: colors[d-1] for d in range(1, 10)}
 
-# --- [좌측 그래프] 지수함수 곡선 구간별 색상화 데이터 생성 ---
 x_curve = np.arange(1, max_x + 1)
 y_curve = base ** x_curve
+digits_curve = np.array([int(str(f"{y:e}")[0]) for y in y_curve])
 
-def get_first_digit_pure(n):
-    return int(str(f"{n:e}")[0])
-
-digits_curve = np.array([get_first_digit_pure(y) for y in y_curve])
-
-# 화면 분할 (1행 2열 구조로 스크롤 방지)
 col_left, col_right = st.columns(2)
 
 with col_left:
-    # 1. 지수함수 곡선 시각화 (앞자리 숫자에 따라 색상 분할)
     fig_curve = go.Figure()
-    
-    # 연속된 색상 구간을 그룹화하여 그리치 않고 뚝뚝 끊기는 현상 방지 위해 선을 끊어서 연결
     for d in range(1, 10):
         mask = (digits_curve == d)
         if np.any(mask):
-            # 연속된 구간 분리를 위해 마스크가 바뀔 때 None을 넣어 끊어짐 방지 처리 기법 적용
             x_seg = np.where(mask, x_curve, np.nan)
             y_seg = np.where(mask, y_curve, np.nan)
-            
             fig_curve.add_trace(go.Scatter(
                 x=x_seg, y=y_seg,
                 mode='lines',
@@ -79,9 +65,8 @@ with col_left:
                 line=dict(color=color_map[d], width=4),
                 connectgaps=False
             ))
-            
     fig_curve.update_layout(
-        title=f"지수함수 곡선 구간별 앞자리 숫자 분포 ($y = {base}^x$)",
+        title=f"지수함수 곡선의 앞자리 숫자별 구간 ($y = {base}^x$)",
         xaxis=dict(title="x"),
         yaxis=dict(title="y (데이터 값)"),
         margin=dict(l=20, r=20, t=40, b=20),
@@ -90,7 +75,6 @@ with col_left:
     st.plotly_chart(fig_curve, use_container_width=True)
 
 with col_right:
-    # 2. 벤포드 법칙 확률 분포 차트 (기존 기능 유지)
     digits = np.arange(1, 10)
     theoretical = np.log10(1 + 1/digits) * 100
     
@@ -116,18 +100,17 @@ with col_right:
             marker=dict(size=8, color='firebrick')
         ))
         fig_bar.update_layout(
-            title=f"추출 결과 분포 (총 누적 샘플: {total_samples}개)",
+            title=f"첫째 자리 추출 결과 (총 샘플: {total_samples}개)",
             xaxis=dict(title="첫째 자리 숫자", tickmode='linear', tick0=1, dtick=1),
             yaxis=dict(title="비율 (%)", range=[0, max(45, max(actual_pct) + 5)]),
             bargap=0,
             margin=dict(l=20, r=20, t=40, b=20),
-            legend=dict(x=0.7, y=0.95)
-        ))
+            legend=dict(x=0.65, y=0.95)
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
     else:
-        st.info("오른쪽 화면에는 샘플 추출 시 실제 통계 결과 그래프가 표시됩니다.")
+        st.info("사이드바에서 [샘플 추출] 버튼을 클릭하면 통계 데이터 그래프가 나타납니다.")
 
-# 최하단에 작게 배치하는 요약 데이터 표
 if len(st.session_state.data_log) > 0:
     df_res = pd.DataFrame({
         "숫자": digits,
@@ -136,4 +119,4 @@ if len(st.session_state.data_log) > 0:
         "실제 비율": [f"{p:.1f}%" for p in actual_pct],
         "오차": [f"{p-t:+.1f}%p" for p, t in zip(actual_pct, theoretical)]
     }).set_index("숫자")
-    st.dataframe(df_res.T, use_container_width=True) # 화면을 아끼기 위해 가로로 눕혀서(T) 배치
+    st.dataframe(df_res.T, use_container_width=True)
