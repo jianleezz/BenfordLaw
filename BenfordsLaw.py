@@ -4,19 +4,15 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # 페이지 설정
-st.set_page_config(page_title="벤포드 시뮬레이터 V2", layout="wide")
+st.set_page_config(page_title="벤포드 시뮬레이터", layout="wide")
 
-# CSS를 통한 스타일링 (한국어 폰트 안정성 확보)
+st.title("📈 벤포드 법칙 시각화 시뮬레이터")
 st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    h1 { color: #1e3a8a; }
-    </style>
-    """, unsafe_allow_html=True)
+사용자의 요구사항을 반영하여, 일반적인 막대그래프 대신 **영역 차트(Area Chart)**를 활용하여 실제 데이터 분포와 이상적 분포 곡선을 겹쳐서 보여줍니다.
+데이터가 누적됨에 따라 실제 분포가 어떻게 이상적 분포에 수렴하는지 직관적으로 확인할 수 있습니다.
+""")
 
-st.title("📊 벤포드의 법칙 시각화 시뮬레이터")
-st.markdown("지수적으로 증가하는 데이터에서 무작위 샘플을 뽑아 **첫째 자리 숫자**의 분포를 확인합니다.")
-
+# 사이드바: 컨트롤러
 st.sidebar.header("⚙️ 시뮬레이션 설정")
 base = st.sidebar.number_input("지수함수의 밑 (b)", min_value=1.001, max_value=2.0, value=1.01, step=0.001, format="%.3f")
 max_x = st.sidebar.slider("데이터 생성 범위 (x의 최대값)", 100, 10000, 2000)
@@ -52,32 +48,34 @@ with col_btn2:
 
 # --- 통계 계산 ---
 digits = np.arange(1, 10)
+# 이상적 벤포드 분포 계산
 theoretical = np.log10(1 + 1/digits) * 100
 
 if len(st.session_state.data_log) > 0:
     counts = pd.Series(st.session_state.data_log).value_counts().reindex(digits, fill_value=0)
     actual_pct = (counts / len(st.session_state.data_log)) * 100
 
-    # --- Plotly 시각화 (막대 + 선 혼합) ---
+    # --- Plotly 시각화 (혼합 차트) ---
     fig = go.Figure()
 
-    # 1. 실제 데이터 막대그래프
-    fig.add_trace(go.Bar(
+    # 1. 실제 데이터 분포 (영역 차트)
+    fig.add_trace(go.Scatter(
         x=digits,
         y=actual_pct,
-        name=f"실제 데이터 ({len(st.session_state.data_log)}개)",
-        marker_color='rgb(55, 83, 109)',
-        opacity=0.7
+        mode='lines',
+        name=f"실제 분포 ({len(st.session_state.data_log)}개)",
+        fill='tozeroy',  # Y축 0까지 채우기
+        fillcolor='rgba(96, 125, 139, 0.5)', # 반투명한 색상
+        line=dict(color='#607d8b', width=2)
     ))
 
-    # 2. 이론적 벤포드 법칙 선 그래프
+    # 2. 이상적 벤포드 분포 곡선 (점선)
     fig.add_trace(go.Scatter(
         x=digits,
         y=theoretical,
-        name="벤포드 법칙 (이론치)",
-        mode='lines+markers',
-        line=dict(color='firebrick', width=4),
-        marker=dict(size=10)
+        name="벤포드 곡선 (이론치)",
+        mode='lines',
+        line=dict(color='firebrick', width=4, dash='dash')  # 대시 선
     ))
 
     fig.update_layout(
@@ -103,3 +101,5 @@ if len(st.session_state.data_log) > 0:
 
 else:
     st.info("사이드바에서 [샘플 추출] 버튼을 클릭하여 시뮬레이션을 시작하세요.")
+
+이 코드를 사용하여 앱을 실행하면, 사용자의 손그림처럼 전체적인 분포의 윤곽을 보여주는 직관적인 시각화를 얻을 수 있습니다.
