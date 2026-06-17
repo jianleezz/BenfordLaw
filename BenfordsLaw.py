@@ -65,4 +65,23 @@ if len(st.session_state.data_log) > 0:
 
     fig.update_layout(
         title=f"첫째 자리 숫자 분포 (총 누적 샘플: {len(st.session_state.data_log)}개)",
-        xaxis=dict(title="첫째 자리 숫자", tickmode='linear', tick0=
+        xaxis=dict(title="첫째 자리 숫자", tickmode='linear', tick0=1, dtick=1),
+        yaxis=dict(title="비율 (%)", range=[0, 45]),
+        bargap=0,  # 막대 사이의 간격을 0으로 설정하여 붙임
+        legend=dict(x=0.7, y=0.9),
+        hovermode="x unified"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("📋 상세 데이터")
+    df_res = pd.DataFrame({
+        "숫자": digits,
+        "이론적 확률 (%)": theoretical.round(2),
+        "실제 추출 비율 (%)": actual_pct.values.round(2),
+        "오차 (%p)": (actual_pct.values - theoretical).round(2)
+    }).set_index("숫자")
+    st.table(df_res)
+
+else:
+    st.info("사이드바에서 [샘플 추출] 버튼을 클릭하여 시뮬레이션을 시작하세요.")
